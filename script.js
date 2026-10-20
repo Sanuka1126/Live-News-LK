@@ -1,87 +1,59 @@
 const container = document.getElementById('news-container');
 const timeEl = document.getElementById('time');
 
-// Hiru & Ada RSS - proxy 2k dala 100% wada karanawa
-const feeds = [
- {name:"hiru", url:"https://www.hirunews.lk/rss/sinhala.xml"},
- {name:"ada", url:"https://sinhala.adaderana.lk/rss.php"}
-];
-
-async function fetchViaAllOrigins(rssUrl){
- try{
-  const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(rssUrl)}`;
-  const res = await fetch(proxy);
-  const data = await res.json();
-  const xmlText = data.contents;
-  const parser = new DOMParser();
-  const xml = parser.parseFromString(xmlText, "text/xml");
-  const items = xml.querySelectorAll("item");
-  let news = [];
-  items.forEach((item,i)=>{
-   if(i>=10) return;
-   const title = item.querySelector("title")?.textContent || "";
-   const desc = item.querySelector("description")?.textContent || "";
-   const link = item.querySelector("link")?.textContent || "";
-   const pubDate = item.querySelector("pubDate")?.textContent || "";
-   const imgMatch = desc.match(/<img[^>]+src="([^">]+)"/);
-   const thumb = item.querySelector("enclosure")?.getAttribute("url") || (imgMatch?imgMatch[1]:"");
-   news.push({
-    title: title,
-    desc: desc.replace(/<[^>]*>/g,'').substring(0,130)+"...",
-    fullDesc: desc.replace(/<[^>]*>/g,''),
-    content: desc,
-    link: link,
-    image: thumb,
-    source: rssUrl.includes("hiru")?"hiru":"ada",
-    date: pubDate ? new Date(pubDate).toLocaleString('si-LK') : "අද"
-   });
-  });
-  return news;
- }catch(e){ return []; }
-}
-
 async function fetchNews(){
- container.innerHTML = "<p style='text-align:center;padding:60px;'>🇱🇰 Live සිංහල පුවත් ලෝඩ් වෙමින්... ⏳</p>";
- let allNews = [];
+ try{
+  container.innerHTML = "<p style='text-align:center;padding:50px;'>🇱🇰 පුවත් ලෝඩ් වෙමින්... ⏳</p>";
+  
+  // 1. Local JSON eken gannawa (100% wada)
+  let allNews = [];
+  try{
+   const localRes = await fetch('./news-data.json?v='+Date.now());
+   if(localRes.ok){
+    allNews = await localRes.json();
+   }
+  }catch(e){}
 
- for(let f of feeds){
-  const n = await fetchViaAllOrigins(f.url);
-  allNews = allNews.concat(n);
- }
-
- // 2nd try - rss2json backup
- if(allNews.length==0){
-  for(let f of feeds){
-   try{
-    const api = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(f.url)}`;
-    const r = await fetch(api);
-    const d = await r.json();
-    if(d.items) d.items.slice(0,8).forEach(item=>{
-     allNews.push({
-      title:item.title, desc:item.description.replace(/<[^>]*>/g,'').substring(0,130)+"...",
-      fullDesc:item.description.replace(/<[^>]*>/g,''), content:item.content||item.description,
-      link:item.link, image:item.enclosure?.link||"", source:f.name,
-      date: new Date(item.pubDate).toLocaleString('si-LK')
-     });
+  // 2. Live RSS try karanawa (wada nam add karanawa)
+  try{
+   const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent('https://www.hirunews.lk/rss/sinhala.xml')}`;
+   const res = await fetch(proxy);
+   const data = await res.json();
+   const xmlText = data.contents;
+   const parser = new DOMParser();
+   const xml = parser.parseFromString(xmlText, "text/xml");
+   const items = xml.querySelectorAll("item");
+   items.forEach((item,i)=>{
+    if(i>=8) return;
+    const title = item.querySelector("title")?.textContent || "";
+    if(!title) return;
+    const desc = item.querySelector("description")?.textContent || "";
+    const cleanDesc = desc.replace(/<[^>]*>/g,'');
+    allNews.unshift({
+     title: title,
+     desc: cleanDesc.substring(0,120)+"...",
+     fullDesc: cleanDesc,
+     content: cleanDesc,
+     link: item.querySelector("link")?.textContent || "#",
+     image: item.querySelector("enclosure")?.getAttribute("url") || "https://images.unsplash.com/photo-1504711434969-e33886168f5c",
+     source: "hiru",
+     date: "Live - දැන්"
     });
-   }catch(e){}
-  }
- }
+   });
+  }catch(e){ console.log("Live RSS fail, local ok"); }
 
- if(allNews.length==0){
-  container.innerHTML = "<p style='text-align:center;padding:30px'>😢 RSS load wenne na. Refresh karanna. (GitHub Pages wala samahara welawata block wenawa)</p>";
-  return;
+  localStorage.setItem('liveNewsLK', JSON.stringify(allNews));
+  displayNews(allNews);
+  if(timeEl) timeEl.textContent = new Date().toLocaleTimeString('si-LK');
+ }catch(err){
+  container.innerHTML = "<p style='text-align:center'>Error loading news</p>";
  }
-
- localStorage.setItem('liveNewsLK', JSON.stringify(allNews));
- displayNews(allNews);
- if(timeEl) timeEl.textContent = new Date().toLocaleTimeString('si-LK');
 }
 
 function displayNews(news){
  container.innerHTML = news.map((n,i)=>`
   <div class="card" data-source="${n.source}">
-   ${n.image?`<img src="${n.image}" style="width:100%;height:180px;object-fit:cover" onerror="this.style.display='none'">`:''}
+   <img src="${n.image}" style="width:100%;height:180px;object-fit:cover" onerror="this.src='https://images.unsplash.com/photo-1504711434969-e33886168f5c'">
    <div class="card-content">
     <h3>${n.title}</h3>
     <p>${n.desc}</p>
