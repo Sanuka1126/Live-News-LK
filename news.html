@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="si">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>News Detail - Live-News-LK</title>
+<link rel="stylesheet" href="style.css">
+<style>
+.detail-box{max-width:800px;margin:20px auto;background:#fff;padding:25px;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,0.08)}
+.detail-box h1{font-size:24px;line-height:1.4;margin-bottom:10px}
+.detail-box .meta{color:#888;font-size:13px;margin-bottom:15px}
+.detail-box img{width:100%;border-radius:12px;margin:15px 0}
+.detail-box p{font-size:16px;line-height:1.8;color:#333}
+.back-btn{display:inline-block;margin-bottom:15px;background:#111;color:#fff;padding:8px 16px;border-radius:20px;text-decoration:none}
+</style>
+</head>
+<body>
+<header><div class="logo">🇱🇰 LIVE-NEWS-LK</div><a href="index.html" style="background:#fff;color:#b71c1c;padding:6px 14px;border-radius:20px;text-decoration:none;font-weight:bold;">🏠 Home</a></header>
+<div class="detail-box" id="detail">Loading... ⏳</div>
+<script>
+const id = new URLSearchParams(window.location.search).get('id');
+const all = JSON.parse(localStorage.getItem('liveNewsLK')||'[]');
+const n = all[id];
+if(n){
+ document.getElementById('detail').innerHTML = `
+  <a href="index.html" class="back-btn">← ආපසු</a>
+  <h1>${n.title}</h1>
+  <div class="meta">📰 ${n.source.toUpperCase()} | ⏰ ${n.date}</div>
+  ${n.image ? `<img src="${n.image}">` : ''}
+  <div style="font-size:17px;line-height:1.9;">
+   <p>${n.fullDesc}</p><br><p>${n.content}</p><br>
+   <p>මෙම පුවත Live-News-LK වෙතින් ඔබ වෙත ගෙන එන ලදී. තවත් පුවත් සඳහා Home වෙත යන්න.</p>
+  </div>
+  <br>
+  <a href="index.html" style="display:block;text-align:center;background:#b71c1c;color:#fff;padding:12px;border-radius:10px;text-decoration:none;font-weight:bold;margin-top:20px;">තවත් පුවත් බලන්න</a>
+ `;
+} else {
+ document.getElementById('detail').innerHTML = `<p>පුවත හමු නොවීය. LocalStorage clear වෙලා. <a href="index.html">Home එකට ගිහින් ආයෙ click කරන්න</a></p>`;
+}
+</script>
+</body>
+  </html>
